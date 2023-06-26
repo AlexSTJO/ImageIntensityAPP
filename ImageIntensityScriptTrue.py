@@ -2,7 +2,8 @@ import os
 import shutil
 import datetime
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QGridLayout, QPushButton, QWidget, QFrame
-from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import Qt, pyqtSlot
 
 
 class ImageDropZone(QFrame):
@@ -52,7 +53,7 @@ class ImageDropZone(QFrame):
         destination_folder = os.path.join(session_folder, self.folder_name)
         os.makedirs(destination_folder, exist_ok=True)
         destination_path = os.path.join(destination_folder, file_name)
-        shutil.move(image_path, destination_path)
+        shutil.copy(image_path, destination_path)
         self.file_list_widget.addItem(file_name)
 
 
@@ -104,32 +105,58 @@ class ImageDropApplication(QMainWindow):
 
         # Close the current window and create a new window
         self.hide()
-        self.new_window = NewWindow(nadh_files, fadh_files)
+        self.new_window = NewWindow(nadh_files, fadh_files, self.nadh_drop_zone, self.fadh_drop_zone)
         self.new_window.show()
 
 
 class NewWindow(QWidget):
-    def __init__(self, nadh_files, fadh_files):
+    def __init__(self, nadh_files, fadh_files, nadh_drop_zone, fadh_drop_zone):
         super().__init__()
         self.setWindowTitle("New Window")
         self.setGeometry(100, 100, 400, 300)
 
-        layout = QVBoxLayout(self)
+        self.nadh_drop_zone = nadh_drop_zone
+        self.fadh_drop_zone = fadh_drop_zone
 
-        nadh_label = QLabel("NADH Files:")
-        nadh_list_widget = QListWidget()
-        nadh_list_widget.addItems(nadh_files)
+        layout = QGridLayout(self)
 
-        fadh_label = QLabel("FADH Files:")
-        fadh_list_widget = QListWidget()
-        fadh_list_widget.addItems(fadh_files)
+        self.nadh_label = QLabel("NADH Files:")
+        self.nadh_list_widget = QListWidget()
+        self.nadh_list_widget.addItems(nadh_files)
+        self.nadh_list_widget.itemClicked.connect(self.on_nadh_item_clicked)
 
-        layout.addWidget(nadh_label)
-        layout.addWidget(nadh_list_widget)
-        layout.addWidget(fadh_label)
-        layout.addWidget(fadh_list_widget)
+        self.fadh_label = QLabel("FADH Files:")
+        self.fadh_list_widget = QListWidget()
+        self.fadh_list_widget.addItems(fadh_files)
+        self.fadh_list_widget.itemClicked.connect(self.on_fadh_item_clicked)
+
+        self.image_label = QLabel(self)
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setMinimumSize(300, 200)
+
+        layout.addWidget(self.nadh_label, 0, 0)
+        layout.addWidget(self.nadh_list_widget, 1, 0)
+        layout.addWidget(self.fadh_label, 0, 1)
+        layout.addWidget(self.fadh_list_widget, 1, 1)
+        layout.addWidget(self.image_label, 2, 0, 1, 2)
 
         self.setLayout(layout)
+
+    @pyqtSlot(QListWidgetItem)
+    def on_nadh_item_clicked(self, item):
+        selected_file = item.text()
+        image_path = os.path.join(self.nadh_drop_zone.session_folder, "NADH", selected_file)
+        self.display_image(image_path)
+
+    @pyqtSlot(QListWidgetItem)
+    def on_fadh_item_clicked(self, item):
+        selected_file = item.text()
+        image_path = os.path.join(self.fadh_drop_zone.session_folder, "FADH", selected_file)
+        self.display_image(image_path)
+
+    def display_image(self, image_path):
+        pixmap = QPixmap(image_path)
+        self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), Qt.AspectRatioMode.KeepAspectRatio))
 
 
 if __name__ == '__main__':
