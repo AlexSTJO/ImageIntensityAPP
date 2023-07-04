@@ -1,9 +1,12 @@
 import os
 import shutil
 import datetime
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QGridLayout, QPushButton, QWidget, QFrame
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QGridLayout, QPushButton, QWidget, QFrame, QLineEdit
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, pyqtSlot
+from script import CreateRedox
+
+
 
 
 class ImageDropZone(QFrame):
@@ -131,11 +134,34 @@ class NewWindow(QWidget):
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setMinimumSize(300, 200)
 
+        self.nadh_gain_label = QLabel("NADH Gain:")
+        self.nadh_gain_textbox = QLineEdit(self)
+        self.nadh_power_label = QLabel("NADH Power:")
+        self.nadh_power_textbox = QLineEdit(self)
+        self.fad_gain_label = QLabel("FAD Gain:")
+        self.fad_gain_textbox = QLineEdit(self)
+        self.fad_power_label = QLabel("FAD Power:")
+        self.fad_power_textbox = QLineEdit(self)
+
+        self.submit_button = QPushButton("Submit", self)
+        self.submit_button.clicked.connect(self.submit)
+
         layout.addWidget(self.nadh_label)
         layout.addWidget(self.nadh_list_widget)
         layout.addWidget(self.fad_label)
         layout.addWidget(self.fad_list_widget)
         layout.addWidget(self.image_label)
+
+        layout.addWidget(self.nadh_gain_label)
+        layout.addWidget(self.nadh_gain_textbox)
+        layout.addWidget(self.nadh_power_label)
+        layout.addWidget(self.nadh_power_textbox)
+        layout.addWidget(self.fad_gain_label)
+        layout.addWidget(self.fad_gain_textbox)
+        layout.addWidget(self.fad_power_label)
+        layout.addWidget(self.fad_power_textbox)
+
+        layout.addWidget(self.submit_button)
 
         self.setLayout(layout)
 
@@ -154,6 +180,15 @@ class NewWindow(QWidget):
     def display_image(self, image_path):
         pixmap = QPixmap(image_path)
         self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), Qt.AspectRatioMode.KeepAspectRatio))
+
+    def submit(self):
+        nadh_gain = float(self.nadh_gain_textbox.text())
+        nadh_power = float(self.nadh_power_textbox.text())
+        fad_gain = float(self.fad_gain_textbox.text())
+        fad_power = float(self.fad_power_textbox.text())
+        CreateRedox(nadh_gain, nadh_power, fad_gain, fad_power)
+
+
 
 
 if __name__ == '__main__':
