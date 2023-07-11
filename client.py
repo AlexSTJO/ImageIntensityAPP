@@ -1,9 +1,12 @@
 import os
 import shutil
 import datetime
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QGridLayout, QPushButton, QWidget, QFrame, QLineEdit
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt, pyqtSlot
+import numpy as np
+from PIL import Image
+from PyQt6.QtWidgets import QApplication, QCheckBox, QMainWindow, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QGridLayout, QPushButton, QWidget, QFrame, QLineEdit, QAbstractItemView
+from PyQt6.QtCore import Qt, pyqtSlot, QSizeF
+from PyQt6.QtGui import QPixmap, QImage, QImageReader
+from PIL.ImageQt import ImageQt
 from script import CreateRedox
 
 
@@ -18,7 +21,7 @@ class ImageDropZone(QFrame):
 
         self.file_list_widget = QListWidget(self)
         self.file_list_widget.setMaximumWidth(200)
-        self.file_list_widget.setDragDropMode(QListWidget.NoDragDrop)
+        self.file_list_widget.setDragDropMode(QAbstractItemView.DragDropMode.NoDragDrop)
 
         self.folder_name = folder_name
         self.file_counter = 1  # Counter for appending to file names
@@ -69,12 +72,12 @@ class ImageDropApplication(QMainWindow):
         self.fad_drop_zone = ImageDropZone(main_widget, "FAD", self.session_folder)
 
         self.layout.addWidget(self.nadh_drop_zone, 0, 0)
-        self.layout.addWidget(QLabel("NADH Files:"), 1, 0, alignment=Qt.AlignmentFlag.AlignCenter)
-        self.layout.addWidget(self.nadh_drop_zone.file_list_widget, 2, 0, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.layout.addWidget(QLabel("NADH Files:"), 1, 0, alignment=Qt.AlignmentFlag.AlignHCenter)
+        self.layout.addWidget(self.nadh_drop_zone.file_list_widget, 2, 0, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         self.layout.addWidget(self.fad_drop_zone, 0, 1)
-        self.layout.addWidget(QLabel("FAD Files:"), 1, 1, alignment=Qt.AlignmentFlag.AlignCenter)
-        self.layout.addWidget(self.fad_drop_zone.file_list_widget, 2, 1, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.layout.addWidget(QLabel("FAD Files:"), 1, 1, alignment=Qt.AlignmentFlag.AlignHCenter)
+        self.layout.addWidget(self.fad_drop_zone.file_list_widget, 2, 1, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         submit_button = QPushButton("Submit Files", main_widget)
         submit_button.clicked.connect(self.submit_files)
@@ -105,18 +108,22 @@ class ImageDropApplication(QMainWindow):
         # Close the current window and create a new window
         self.hide()
         self.new_window = NewWindow(nadh_files, fad_files, self.nadh_drop_zone.session_folder,
-                                     self.fad_drop_zone.session_folder)
+                                     self.fad_drop_zone.session_folder, self.session_folder)
+        print("pp" + self.session_folder)
         self.new_window.show()
 
 
 class NewWindow(QWidget):
-    def __init__(self, nadh_files, fad_files, nadh_session_folder, fad_session_folder):
+    def __init__(self, nadh_files, fad_files, nadh_session_folder, fad_session_folder, session_folder):
         super().__init__()
         self.setWindowTitle("New Window")
         self.setGeometry(100, 100, 400, 300)
 
         self.nadh_session_folder = nadh_session_folder
         self.fad_session_folder = fad_session_folder
+        self.session_folder = session_folder
+        print(os.getcwd())
+        #self.results_session_folder = 
 
         layout = QGridLayout(self)
 
@@ -130,8 +137,13 @@ class NewWindow(QWidget):
         self.fad_list_widget.addItems(fad_files)
         self.fad_list_widget.itemClicked.connect(self.on_fad_item_clicked)
 
+        self.results_label = QLabel("Results")
+        self.results_list_widget = QListWidget()
+        self.results_list_widget.itemClicked.connect(self.on_results_item_clicked)
+
+
         self.image_label = QLabel(self)
-        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         self.image_label.setMinimumSize(300, 200)
 
         self.nadh_gain_label = QLabel("NADH Gain:")
@@ -143,25 +155,43 @@ class NewWindow(QWidget):
         self.fad_power_label = QLabel("FAD Power:")
         self.fad_power_textbox = QLineEdit(self)
 
-        self.submit_button = QPushButton("Submit", self)
-        self.submit_button.clicked.connect(self.submit)
+        self.button1 = QPushButton("NADH/FAD")
+        self.button2 = QPushButton("NADH/(FAD+NADH)")
+        self.button3 = QPushButton("FAD/NADH")
+        self.button4 = QPushButton("FAD/(NADH+FAD)")
 
-        layout.addWidget(self.nadh_label)
-        layout.addWidget(self.nadh_list_widget)
-        layout.addWidget(self.fad_label)
-        layout.addWidget(self.fad_list_widget)
-        layout.addWidget(self.image_label)
+        self.apply_pretty_redox_checkbox = QCheckBox("Apply PrettyRedox", self)
+        self.apply_pretty_redox_checkbox.setChecked(False)
 
-        layout.addWidget(self.nadh_gain_label)
-        layout.addWidget(self.nadh_gain_textbox)
-        layout.addWidget(self.nadh_power_label)
-        layout.addWidget(self.nadh_power_textbox)
-        layout.addWidget(self.fad_gain_label)
-        layout.addWidget(self.fad_gain_textbox)
-        layout.addWidget(self.fad_power_label)
-        layout.addWidget(self.fad_power_textbox)
+        self.button1.clicked.connect(self.on_button1_clicked)
+        self.button2.clicked.connect(self.on_button2_clicked)
+        self.button3.clicked.connect(self.on_button3_clicked)
+        self.button4.clicked.connect(self.on_button4_clicked)
 
-        layout.addWidget(self.submit_button)
+
+
+        layout.addWidget(self.nadh_label, 0, 0)
+        layout.addWidget(self.nadh_list_widget, 1, 0)
+        layout.addWidget(self.fad_label, 0, 1)
+        layout.addWidget(self.fad_list_widget, 1, 1)
+        layout.addWidget(self.image_label, 2, 0, 1, 3, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self.results_label, 0, 2)
+        layout.addWidget(self.results_list_widget, 1, 2)
+
+        layout.addWidget(self.nadh_gain_label, 3, 0)
+        layout.addWidget(self.nadh_gain_textbox, 3, 1)
+        layout.addWidget(self.nadh_power_label, 4, 0)
+        layout.addWidget(self.nadh_power_textbox, 4, 1)
+        layout.addWidget(self.fad_gain_label, 5, 0)
+        layout.addWidget(self.fad_gain_textbox, 5, 1)
+        layout.addWidget(self.fad_power_label, 6, 0)
+        layout.addWidget(self.fad_power_textbox, 6, 1)
+
+        layout.addWidget(self.button1, 3, 2)
+        layout.addWidget(self.button2, 4, 2)
+        layout.addWidget(self.button3, 5, 2)
+        layout.addWidget(self.button4, 6, 2)
+        layout.addWidget(self.apply_pretty_redox_checkbox, 7, 0, 1, 2)
 
         self.setLayout(layout)
 
@@ -177,17 +207,86 @@ class NewWindow(QWidget):
         image_path = os.path.join(self.fad_session_folder, "FAD", selected_file)
         self.display_image(image_path)
 
-    def display_image(self, image_path):
-        pixmap = QPixmap(image_path)
-        self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), Qt.AspectRatioMode.KeepAspectRatio))
+    @pyqtSlot(QListWidgetItem)
+    def on_results_item_clicked(self, item):
+        selected_file = item.text()
+        image_path = os.path.join(self.session_folder,"results",selected_file)
+        self.display_image(image_path)
+    
+    @pyqtSlot()
+    def on_button1_clicked(self):
+        # Existing code...
+        self.call_create_redox('NADH_div_FAD')
 
-    def submit(self):
+    @pyqtSlot()
+    def on_button2_clicked(self):
+        # Existing code...
+        self.call_create_redox('NADH_div_FAD_NADH')
+
+    @pyqtSlot()
+    def on_button3_clicked(self):
+        # Existing code...
+        self.call_create_redox('FAD_div_NADH')
+
+    @pyqtSlot()
+    def on_button4_clicked(self):
+        # Existing code...
+        self.call_create_redox('FAD_div_NADH_FAD')
+
+
+
+    @pyqtSlot()
+    def call_create_redox(self, choice):
+        # Get the state of the checkbox
+        apply_pretty_redox = self.apply_pretty_redox_checkbox.isChecked()
+
+        # Get the gain and power values from the textboxes
         nadh_gain = float(self.nadh_gain_textbox.text())
         nadh_power = float(self.nadh_power_textbox.text())
         fad_gain = float(self.fad_gain_textbox.text())
         fad_power = float(self.fad_power_textbox.text())
-        CreateRedox(nadh_gain, nadh_power, fad_gain, fad_power)
 
+        # Call the CreateRedox function
+        results_path = CreateRedox(nadh_gain, nadh_power, fad_gain, fad_power, choice, apply_pretty_redox)
+
+        self.populate_results_list(results_path)
+
+
+
+    def populate_results_list(self, results_path):
+        tiff_files = [file for file in os.listdir(results_path) if file.endswith(".tif")]
+        self.results_list_widget.clear()
+        self.results_list_widget.addItems(tiff_files)
+        os.chdir('../..')
+
+
+
+    def display_image(self, image_path):
+        image = Image.open(image_path)
+        image = image.convert("I")  # Convert to 32-bit grayscale image
+
+        # Normalize image data
+        image_data = np.array(image)
+        image_data_8bit = ((image_data - np.min(image_data)) / (np.max(image_data) - np.min(image_data))) * 255
+        image_data_8bit = image_data_8bit.astype(np.uint8)
+
+        # Create QImage from image data
+        qimage = QImage(image_data_8bit, image_data_8bit.shape[1], image_data_8bit.shape[0], QImage.Format.Format_Grayscale8)
+
+        # Create QPixmap from QImage
+        pixmap = QPixmap.fromImage(qimage)
+
+        # Scale the pixmap while maintaining the aspect ratio
+        scaled_pixmap = pixmap.scaledToWidth(self.image_label.width())
+
+        # Adjust the label height to match the aspect ratio of the image
+        adjusted_height = int(scaled_pixmap.height() * (self.image_label.width() / scaled_pixmap.width()))
+        self.image_label.setFixedHeight(adjusted_height)
+
+        self.image_label.setPixmap(scaled_pixmap)
+
+        
+    
 
 
 
@@ -197,4 +296,4 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = ImageDropApplication()
     window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

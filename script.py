@@ -77,10 +77,27 @@ def PrettyRedox(redox, total_intensity, lut=None, botlim=0, uplim=1):
 
     return redox2
 
+def typeofredox(choice, fad , nadh):
+    operations = {
+        'NADH_div_FAD': lambda x, y: np.divide(x, y),
+        'NADH_div_FAD_NADH': lambda x, y: np.divide(x, x + y),
+        'FAD_div_NADH': lambda x, y: np.divide(x, y),
+        'FAD_div_NADH_FAD': lambda x, y: np.divide(x, x + y)
+    }
 
-def CreateRedox(fad_gain, nadh_gain, fad_power, nadh_power):
+    with np.errstate(divide='ignore', invalid='ignore'):
+        redox = operations[choice](fad, nadh)
+
+    redox[np.isnan(redox)] = 0  # Replace NaN with 0
+    redox[np.isinf(redox)] = 0  # Replace infinity with 0
+
+    return redox
+
+def CreateRedox(fad_gain, nadh_gain, fad_power, nadh_power, choice, apply_pretty_redox):
     os.chdir(findcurrentfolder())
-    os.mkdir('results')
+    if not os.path.exists('results'):
+        os.mkdir('results')
+    results_path = os.getcwd() + '/results'
     FAD_list = sorted(os.listdir('FAD'), key=lambda x: int(re.findall(r'\d+', x.split('.')[0])[-1]))
     NADH_list = sorted(os.listdir('NADH'), key=lambda x: int(re.findall(r'\d+', x.split('.')[0])[-1]))
     for i in range(len(FAD_list)):
@@ -106,25 +123,32 @@ def CreateRedox(fad_gain, nadh_gain, fad_power, nadh_power):
         nadh_normalized = (nadh_image_calibrated - np.min(nadh_image_calibrated)) / ((np.max(nadh_image_calibrated) - np.min(nadh_image_calibrated)))
 
 # Calculate redox map
-        redox_map = fad_normalized / (fad_normalized + nadh_normalized)
+        redox_map = typeofredox(choice, fad_normalized, nadh_normalized)
 
 
         total_intensity = fad_image_calibrated_shifted + nadh_image_calibrated
 
-        redox_pretty = PrettyRedox(redox_map, total_intensity)
-        redox_image_path = f'results/redox_image_{i}.tif'
+
+        redox_image_path = f'results/redox_image_{i}_{choice}.tif'
         
-        plt.imsave(redox_image_path, redox_pretty, cmap='gist_gray',vmax= 1, vmin = 0.5, format='tiff')
+        plt.imsave(redox_image_path, redox_map, cmap='gist_gray',vmax= 1, vmin = 0.5, format='tiff')
+
+        if apply_pretty_redox:
+            total_intensity = fad_image_calibrated_shifted + nadh_image_calibrated
+            redox_map = PrettyRedox(redox_map, total_intensity)
+            redox_image_path = f'results/redox_image_{i}_{choice}_pretty.tif'
+            plt.imsave(redox_image_path, redox_map, cmap='gist_gray',vmax= 1, vmin = 0.5, format='tiff')
 
 
         mean_rr = np.mean(redox_map[redox_map != 0])
 
         rr_iqr = iqr(redox_map[redox_map != 0])
-        infolist = [f'redox_map_{i}', mean_rr, rr_iqr]
+        infolist = [f'redox_map_{i}', choice, mean_rr, rr_iqr]
         with open('db.csv', 'w') as f:
 
             writeline = csv.writer(f)
             writeline.writerow(infolist)
+    return results_path
 
 
 
