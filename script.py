@@ -7,6 +7,10 @@ from scipy.ndimage import shift
 from skimage import exposure
 from scipy.signal import correlate2d
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+from scipy.stats import iqr
+import csv
+
 
 def findcurrentfolder():
     os.chdir('ImageAnalyzerASTJO')
@@ -66,11 +70,10 @@ def PrettyRedox(redox, total_intensity, lut=None, botlim=0, uplim=1):
     redox = (redox - botlim) / (uplim - botlim)
     redox = np.clip(redox, 0, 1)
     redox = 1 - redox  # Invert the redox values
-
     redox = np.round(bitScale * redox) + 1
-
     redox_indices = np.clip(redox.astype(int), 0, bitScale)  # Clip indices to valid range
     redox2 = lut[redox_indices]
+
 
     return redox2
 
@@ -91,35 +94,50 @@ def CreateRedox(fad_gain, nadh_gain, fad_power, nadh_power):
         NADH_image_array = np.array(NADH_image)
 
         im_size = NADH_image_array.shape[0]
-        calibrated_FAD_array = calibrate_image(FAD_image_array, fad_gain, fad_power)
-        calibrated_NADH_array = calibrate_image(NADH_image_array, nadh_gain, nadh_power)
-        correlation_map = Normalizedcorrelation(calibrated_FAD_array, calibrated_NADH_array)
+        fad_image_calibrated = calibrate_image(FAD_image_array, fad_gain, fad_power)
+        nadh_image_calibrated = calibrate_image(NADH_image_array, nadh_gain, nadh_power)
+        correlation_map = Normalizedcorrelation(fad_image_calibrated, nadh_image_calibrated)
         corr_max_y, corr_max_x = np.unravel_index(correlation_map.argmax(), correlation_map.shape)
         y_shift = corr_max_y
         x_shift = corr_max_x
-        print(y_shift)
-        print(x_shift)
-        fad_image_calibrated_shifted = shift(calibrated_FAD_array, (y_shift, x_shift))
+        fad_image_calibrated_shifted = shift(fad_image_calibrated, (y_shift, x_shift))
         
-        fad_normalized = (fad_image_calibrated_shifted - np.min(fad_image_calibrated_shifted)) / (np.max(fad_image_calibrated_shifted) - np.min(fad_image_calibrated_shifted))
+        fad_normalized = (fad_image_calibrated_shifted - np.min(fad_image_calibrated_shifted)) / ((np.max(fad_image_calibrated_shifted) - np.min(fad_image_calibrated_shifted)))
+        nadh_normalized = (nadh_image_calibrated - np.min(nadh_image_calibrated)) / ((np.max(nadh_image_calibrated) - np.min(nadh_image_calibrated)))
 
-        # Normalize NADH array
-        nadh_normalized = (calibrated_NADH_array - np.min(calibrated_NADH_array)) / (np.max(calibrated_NADH_array) - np.min(calibrated_NADH_array))
-
-        # Calculate redox map
+# Calculate redox map
         redox_map = fad_normalized / (fad_normalized + nadh_normalized)
-        redox_map[np.isnan(redox_map)] = 0.0
 
-        calibrated_NADH_image_path_out = 'results/c_NADH_image.tif'
-        plt.imsave(calibrated_NADH_image_path_out, redox_map, cmap='gray', format='tiff')
 
-        total_intensity = fad_image_calibrated_shifted + calibrated_NADH_array
+        total_intensity = fad_image_calibrated_shifted + nadh_image_calibrated
 
         redox_pretty = PrettyRedox(redox_map, total_intensity)
-        print('done')
-        redox_image_path = 'results/redox_image.tif'
-        plt.imsave(redox_image_path, redox_pretty, cmap='gray', vmin=0, vmax=1, format='tiff')
+        redox_image_path = f'results/redox_image_{i}.tif'
+        
+        plt.imsave(redox_image_path, redox_pretty, cmap='gist_gray',vmax= 1, vmin = 0.5, format='tiff')
 
-        NADH_image_path_out = 'results/NADH_image.tif'
-        plt.imsave(NADH_image_path_out, NADH_image_array, cmap='gray', format='tiff')
+
+        mean_rr = np.mean(redox_map[redox_map != 0])
+
+        rr_iqr = iqr(redox_map[redox_map != 0])
+        infolist = [f'redox_map_{i}', mean_rr, rr_iqr]
+        with open('db.csv', 'w') as f:
+
+            writeline = csv.writer(f)
+            writeline.writerow(infolist)
+
+
+
+
+
+
+
+
+        
+       
+        
+
+
+
+
 
