@@ -8,7 +8,8 @@ from PyQt6.QtCore import Qt, pyqtSlot, QSizeF
 from PyQt6.QtGui import QPixmap, QImage, QImageReader
 from PIL.ImageQt import ImageQt
 from script import CreateRedox
-
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 
 
@@ -263,15 +264,9 @@ class NewWindow(QWidget):
 
     def display_image(self, image_path):
         image = Image.open(image_path)
-        image = image.convert("I")  # Convert to 32-bit grayscale image
-
-        # Normalize image data
-        image_data = np.array(image)
-        image_data_8bit = ((image_data - np.min(image_data)) / (np.max(image_data) - np.min(image_data))) * 255
-        image_data_8bit = image_data_8bit.astype(np.uint8)
 
         # Create QImage from image data
-        qimage = QImage(image_data_8bit, image_data_8bit.shape[1], image_data_8bit.shape[0], QImage.Format.Format_Grayscale8)
+        qimage = QImage(image_path)
 
         # Create QPixmap from QImage
         pixmap = QPixmap.fromImage(qimage)
@@ -284,8 +279,7 @@ class NewWindow(QWidget):
         self.image_label.setFixedHeight(adjusted_height)
 
         self.image_label.setPixmap(scaled_pixmap)
-
-        
+            
     
 
 

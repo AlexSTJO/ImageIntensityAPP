@@ -131,13 +131,13 @@ def CreateRedox(fad_gain, nadh_gain, fad_power, nadh_power, choice, apply_pretty
 
         redox_image_path = f'results/redox_image_{i}_{choice}.tif'
         
-        plt.imsave(redox_image_path, redox_map, cmap='gist_gray',vmax= 1, vmin = 0.5, format='tiff')
+        plt.imsave(redox_image_path, redox_map, cmap='plasma',vmax= 1, vmin = 0.5, format='tiff')
 
         if apply_pretty_redox:
             total_intensity = fad_image_calibrated_shifted + nadh_image_calibrated
             redox_map = PrettyRedox(redox_map, total_intensity)
             redox_image_path = f'results/redox_image_{i}_{choice}_pretty.tif'
-            plt.imsave(redox_image_path, redox_map, cmap='gist_gray',vmax= 1, vmin = 0.5, format='tiff')
+            plt.imsave(redox_image_path, redox_map, cmap='plasma',vmax= 1, vmin = 0.5, format='tiff')
 
 
         mean_rr = np.mean(redox_map[redox_map != 0])
