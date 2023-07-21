@@ -10,7 +10,17 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from scipy.stats import iqr
 import csv
+from PIL import Image
 
+def pullmeta(image_path):
+    image = Image.open(image_path)
+
+# Access the metadata (tags) of the image
+    metadata = image.tag_v2
+
+# Print all metadata tags and their values
+    for tag, value in metadata.items():
+        print(f'{tag}: {value}')
 
 def findcurrentfolder():
     os.chdir('ImageAnalyzerASTJO')
@@ -103,12 +113,15 @@ def CreateRedox(fad_gain, nadh_gain, fad_power, nadh_power, choice, apply_pretty
     for i in range(len(FAD_list)):
         FAD_image_path = f'FAD/{FAD_list[i]}'
         NADH_image_path = f'NADH/{NADH_list[i]}'
+        pullmeta(FAD_image_path)
 
         FAD_image = plt.imread(FAD_image_path)
         NADH_image = plt.imread(NADH_image_path)
 
         FAD_image_array = np.array(FAD_image)
         NADH_image_array = np.array(NADH_image)
+
+        print(NADH_image_array)
 
         im_size = NADH_image_array.shape[0]
         fad_image_calibrated = calibrate_image(FAD_image_array, fad_gain, fad_power)

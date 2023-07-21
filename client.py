@@ -265,8 +265,12 @@ class NewWindow(QWidget):
     def display_image(self, image_path):
         image = Image.open(image_path)
 
+        # Convert the image to RGB mode (if it's grayscale)
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
         # Create QImage from image data
-        qimage = QImage(image_path)
+        qimage = ImageQt(image)
 
         # Create QPixmap from QImage
         pixmap = QPixmap.fromImage(qimage)
