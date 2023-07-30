@@ -11,8 +11,7 @@ from script import CreateRedox
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
-
-
+# Image Drop Zone class to handle dropping and processing images
 class ImageDropZone(QFrame):
     def __init__(self, parent, folder_name, session_folder):
         super().__init__(parent)
@@ -51,7 +50,7 @@ class ImageDropZone(QFrame):
         shutil.copy(image_path, destination_path)
         self.file_list_widget.addItem(file_name)
 
-
+# Main application window
 class ImageDropApplication(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -98,14 +97,6 @@ class ImageDropApplication(QMainWindow):
         fad_files = [self.fad_drop_zone.file_list_widget.item(i).text() for i in
                      range(self.fad_drop_zone.file_list_widget.count())]
 
-        # Example: Display the submitted file names in the console
-        print("NADH Files:")
-        for file in nadh_files:
-            print(file)
-        print("FAD Files:")
-        for file in fad_files:
-            print(file)
-
         # Close the current window and create a new window
         self.hide()
         self.new_window = NewWindow(nadh_files, fad_files, self.nadh_drop_zone.session_folder,
@@ -113,7 +104,7 @@ class ImageDropApplication(QMainWindow):
         print("pp" + self.session_folder)
         self.new_window.show()
 
-
+# NewWindow class to display and process redox calculation
 class NewWindow(QWidget):
     def __init__(self, nadh_files, fad_files, nadh_session_folder, fad_session_folder, session_folder):
         super().__init__()
@@ -123,8 +114,6 @@ class NewWindow(QWidget):
         self.nadh_session_folder = nadh_session_folder
         self.fad_session_folder = fad_session_folder
         self.session_folder = session_folder
-        print(os.getcwd())
-        #self.results_session_folder = 
 
         layout = QGridLayout(self)
 
@@ -141,7 +130,6 @@ class NewWindow(QWidget):
         self.results_label = QLabel("Results")
         self.results_list_widget = QListWidget()
         self.results_list_widget.itemClicked.connect(self.on_results_item_clicked)
-
 
         self.image_label = QLabel(self)
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
@@ -168,8 +156,6 @@ class NewWindow(QWidget):
         self.button2.clicked.connect(self.on_button2_clicked)
         self.button3.clicked.connect(self.on_button3_clicked)
         self.button4.clicked.connect(self.on_button4_clicked)
-
-
 
         layout.addWidget(self.nadh_label, 0, 0)
         layout.addWidget(self.nadh_list_widget, 1, 0)
@@ -211,30 +197,24 @@ class NewWindow(QWidget):
     @pyqtSlot(QListWidgetItem)
     def on_results_item_clicked(self, item):
         selected_file = item.text()
-        image_path = os.path.join(self.session_folder,"results",selected_file)
+        image_path = os.path.join(self.session_folder, "results", selected_file)
         self.display_image(image_path)
-    
+
     @pyqtSlot()
     def on_button1_clicked(self):
-        # Existing code...
         self.call_create_redox('NADH_div_FAD')
 
     @pyqtSlot()
     def on_button2_clicked(self):
-        # Existing code...
         self.call_create_redox('NADH_div_FAD_NADH')
 
     @pyqtSlot()
     def on_button3_clicked(self):
-        # Existing code...
         self.call_create_redox('FAD_div_NADH')
 
     @pyqtSlot()
     def on_button4_clicked(self):
-        # Existing code...
         self.call_create_redox('FAD_div_NADH_FAD')
-
-
 
     @pyqtSlot()
     def call_create_redox(self, choice):
@@ -252,15 +232,11 @@ class NewWindow(QWidget):
 
         self.populate_results_list(results_path)
 
-
-
     def populate_results_list(self, results_path):
         tiff_files = [file for file in os.listdir(results_path) if file.endswith(".tif")]
         self.results_list_widget.clear()
         self.results_list_widget.addItems(tiff_files)
         os.chdir('../..')
-
-
 
     def display_image(self, image_path):
         image = Image.open(image_path)
@@ -283,9 +259,6 @@ class NewWindow(QWidget):
         self.image_label.setFixedHeight(adjusted_height)
 
         self.image_label.setPixmap(scaled_pixmap)
-            
-    
-
 
 
 if __name__ == '__main__':
